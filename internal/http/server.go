@@ -6,17 +6,20 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth/v5"
+	auth "github.com/skdiver33/gophermart/internal/auth"
 	handler "github.com/skdiver33/gophermart/internal/http/handlers"
+	um "github.com/skdiver33/gophermart/internal/user"
+	memstorage "github.com/skdiver33/gophermart/storage"
 )
 
-func init() {
-	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
+// func init() {
+// 	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
 
-	// For debugging/example purposes, we generate and print
-	// a sample jwt token with claims `user_id:123` here:
-	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123})
-	fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
-}
+// 	// For debugging/example purposes, we generate and print
+// 	// a sample jwt token with claims `user_id:123` here:
+// 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123, "exp": time.Now().Add(20 * time.Second)})
+// 	fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
+// }
 
 type Server struct {
 	Config         *ServerConfig
@@ -35,7 +38,12 @@ func NewServer() (*Server, error) {
 	server := Server{}
 	server.Config = newServerConfig()
 
-	serverHandler := handler.NewServerHandler()
+	auth := auth.NewAuth()
+	storage := memstorage.NewUserMemStorage()
+	manager := um.NewUserManager(storage, auth)
+
+	serverHandler := handler.NewServerHandler(manager)
+
 	newRouter := chi.NewRouter()
 	//	newRouter.Use(serverHandler.RequestLogger)
 	//	newRouter.Use(serverHandler.SigningHandle)
@@ -46,8 +54,21 @@ func NewServer() (*Server, error) {
 		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("welcome anonymous"))
 		})
-		router.Post("/register", serverHandler.UserRegisterHandler)
-		router.Post("/login", serverHandler.UserLoginHandler)
+		router.Route("/api/user", func(r chi.Router) {
+			r.Post("/register", serverHandler.UserRegisterHandler)
+			r.Post("/login", serverHandler.UserLoginHandler)
+		})
+
+	})
+
+	// Protected route
+	newRouter.Group(func(r chi.Router) {
+		r.Use(jwtauth.Verifier(auth.GetBaseToken()))
+		r.Use(jwtauth.Authenticator(auth.GetBaseToken()))
+		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
+		})
 	})
 
 	server.HandlersRouter = newRouter
