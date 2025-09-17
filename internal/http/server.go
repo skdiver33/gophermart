@@ -1,25 +1,22 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth/v5"
 	auth "github.com/skdiver33/gophermart/internal/auth"
+	bm "github.com/skdiver33/gophermart/internal/balance"
 	handler "github.com/skdiver33/gophermart/internal/http/handlers"
+	mid "github.com/skdiver33/gophermart/internal/http/middleware"
+	loyalty "github.com/skdiver33/gophermart/internal/loyalty"
+	om "github.com/skdiver33/gophermart/internal/order"
 	um "github.com/skdiver33/gophermart/internal/user"
-	memstorage "github.com/skdiver33/gophermart/storage"
+	wm "github.com/skdiver33/gophermart/internal/withdraw"
+	storage "github.com/skdiver33/gophermart/storage"
 )
-
-// func init() {
-// 	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
-
-// 	// For debugging/example purposes, we generate and print
-// 	// a sample jwt token with claims `user_id:123` here:
-// 	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123, "exp": time.Now().Add(20 * time.Second)})
-// 	fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
-// }
 
 type Server struct {
 	Config         *ServerConfig
@@ -39,51 +36,50 @@ func NewServer() (*Server, error) {
 	server.Config = newServerConfig()
 
 	auth := auth.NewAuth()
-	storage := memstorage.NewUserMemStorage()
-	manager := um.NewUserManager(storage, auth)
+	storage, err := storage.NewSQLStorage("postgres://gophermart:secret@192.168.1.48:5432/gophermart?sslmode=disable")
+	if err != nil {
+		return nil, fmt.Errorf("error creatr sql storage. %w", err)
+	}
 
-	serverHandler := handler.NewServerHandler(manager)
+	userManager := um.NewUserManager(storage, auth)
+	orderManager := om.NewOrderManager(storage)
+	withdrawManager := wm.NewWithdrawManager(storage)
+	balanceManager := bm.NewBalanceManager(storage)
+
+	orderProcessor := loyalty.NewOrderProcessor(balanceManager, orderManager, loyalty.NewAccuralClientConfig())
+	go orderProcessor.Start(context.TODO())
+
+	serverHandler := handler.NewServerHandler(userManager, orderManager, withdrawManager, balanceManager)
+	serverLoger := mid.NewServiceLogger()
 
 	newRouter := chi.NewRouter()
-	//	newRouter.Use(serverHandler.RequestLogger)
-	//	newRouter.Use(serverHandler.SigningHandle)
-	//	newRouter.Use(newHserverHandlerandler.GzipHandle)
+	newRouter.Use(serverLoger.RequestLogger)
 
-	// Public routes
-	newRouter.Group(func(router chi.Router) {
-		router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	newRouter.Group(func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("welcome anonymous"))
 		})
-		router.Route("/api/user", func(r chi.Router) {
+		r.Route("/api/user", func(r chi.Router) {
 			r.Post("/register", serverHandler.UserRegisterHandler)
 			r.Post("/login", serverHandler.UserLoginHandler)
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(auth.GetBaseToken()))
+				r.Use(jwtauth.Authenticator(auth.GetBaseToken()))
+				r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+					_, claims, _ := jwtauth.FromContext(r.Context())
+					w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
+				})
+				r.Post("/orders", serverHandler.LoadOrderHandler)
+				r.Get("/orders", serverHandler.GetAllOrdersHandler)
+				r.Get("/balance", serverHandler.GetBalanceHandler)
+				r.Post("/balance/withdraw", serverHandler.GetWithdrawHandler)
+				r.Get("/withdrawals", serverHandler.GetWithdrawAllHandler)
+			})
 		})
 
-	})
-
-	// Protected route
-	newRouter.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(auth.GetBaseToken()))
-		r.Use(jwtauth.Authenticator(auth.GetBaseToken()))
-		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
-		})
 	})
 
 	server.HandlersRouter = newRouter
 
 	return &server, nil
-
-	// newRouter.Route("/api/user", func(r chi.Router) {
-
-	// 	r.Route("/value", func(r chi.Router) {
-	// 		r.Post("/", newHandler.GetJSONMetrics)
-	// 		r.Get("/{metricsType}/{metricsName}", newHandler.GetMetrics)
-	// 	})
-	// 	r.Route("/update", func(r chi.Router) {
-	// 		r.Post("/", newHandler.SetJSONMetrics)
-	// 		r.Post("/{metricsType}/{metricsName}/{metricsValue}", newHandler.SetMetrics)
-	// 	})
-	// })
 }

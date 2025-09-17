@@ -2,32 +2,227 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"time"
 
+	"github.com/skdiver33/gophermart/internal/balance"
+	bm "github.com/skdiver33/gophermart/internal/balance"
+	om "github.com/skdiver33/gophermart/internal/order"
 	um "github.com/skdiver33/gophermart/internal/user"
+	wm "github.com/skdiver33/gophermart/internal/withdraw"
 )
 
 type ServerHandler struct {
-	userManager um.UserManager
+	userManager     *um.UserManager
+	orderManager    *om.OrderManager
+	withdrawManager *wm.WithdrawManager
+	balanceManager  *bm.BalanceManager
 }
 
-func NewServerHandler(manager *um.UserManager) *ServerHandler {
-	return &ServerHandler{userManager: *manager}
+func NewServerHandler(userManager *um.UserManager, orderManager *om.OrderManager, withdrawManager *wm.WithdrawManager, balanceManager *bm.BalanceManager) *ServerHandler {
+	return &ServerHandler{userManager: userManager, orderManager: orderManager, withdrawManager: withdrawManager, balanceManager: balanceManager}
 }
 
-func (handler *ServerHandler) UserRegisterHandler(rw http.ResponseWriter, request *http.Request) {}
+func (handler *ServerHandler) UserRegisterHandler(rw http.ResponseWriter, request *http.Request) {
+	userData := um.User{}
+
+	if err := json.NewDecoder(request.Body).Decode(&userData); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, err := handler.userManager.UserRegister(request.Context(), &userData)
+	if err != nil {
+		returnStatus := http.StatusInternalServerError
+		if errors.Is(err, um.ErrUserAlreadyExist) {
+			returnStatus = http.StatusConflict
+		}
+		http.Error(rw, err.Error(), returnStatus)
+		return
+	}
+
+	userAuthToken, err := handler.userManager.UserAuth(request.Context(), user)
+	if err != nil {
+		returnStatus := http.StatusInternalServerError
+		if errors.Is(err, um.ErrUserWithCredNotFound) {
+			returnStatus = http.StatusUnauthorized
+		}
+		http.Error(rw, err.Error(), returnStatus)
+		return
+	}
+	err = handler.balanceManager.CreateUserBalance(request.Context(), user.Id)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	cookie := http.Cookie{}
+	cookie.Name = "accessToken"
+	cookie.Value = userAuthToken
+	http.SetCookie(rw, &cookie)
+	rw.Header().Set("Content-Type", "application/text-plain")
+	rw.Write([]byte(userAuthToken))
+
+}
 func (handler *ServerHandler) UserLoginHandler(rw http.ResponseWriter, request *http.Request) {
 	userData := um.User{}
 	if err := json.NewDecoder(request.Body).Decode(&userData); err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
+	userAuthToken, err := handler.userManager.UserAuth(request.Context(), &userData)
+	if err != nil {
+		returnStatus := http.StatusInternalServerError
+		if errors.Is(err, um.ErrUserWithCredNotFound) {
+			returnStatus = http.StatusUnauthorized
+		}
+		http.Error(rw, err.Error(), returnStatus)
+		return
+	}
+	cookie := http.Cookie{}
+	cookie.Name = "accessToken"
+	cookie.Value = userAuthToken
+	http.SetCookie(rw, &cookie)
+	rw.Header().Set("Content-Type", "application/text-plain")
+	rw.Write([]byte(userAuthToken))
+}
+
+func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *http.Request) {
+	newOrder := om.Order{Status: om.OrderStatusNew, Accrual: 0, UploadData: time.Now()}
+	if request.Header.Get("Content-Type") != "text/plain" {
+		http.Error(rw, "bad requst format", http.StatusBadRequest)
+		return
+	}
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	newOrder.Number = string(body)
+	if !newOrder.CheckNumber() {
+		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
+		return
+	}
+
+	newOrder.UserId, err = handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = handler.orderManager.LoadOrder(request.Context(), &newOrder)
+	if err != nil {
+		returnCode := http.StatusInternalServerError
+		if errors.Is(err, om.ErrOrderLoadAnotherUser) {
+			returnCode = http.StatusConflict
+		}
+		http.Error(rw, err.Error(), returnCode)
+		return
+	}
+	returnCode := http.StatusOK
+	if newOrder.Status != om.OrderStatusNew {
+		returnCode = http.StatusAccepted
+	}
+	rw.WriteHeader(returnCode)
 
 }
-func (handler *ServerHandler) UploadOrderHandler(rw http.ResponseWriter, request *http.Request)    {}
-func (handler *ServerHandler) DownloadOrdersHandler(rw http.ResponseWriter, request *http.Request) {}
-func (handler *ServerHandler) GetBalanceHandler(rw http.ResponseWriter, request *http.Request)     {}
-func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request *http.Request)    {}
-func (handler *ServerHandler) GetWithdrawAllHandler(rw http.ResponseWriter, request *http.Request) {}
+func (handler *ServerHandler) GetAllOrdersHandler(rw http.ResponseWriter, request *http.Request) {
+
+	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	orders, err := handler.orderManager.GetAllOrdersForUser(request.Context(), userId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(*orders) == 0 {
+		http.Error(rw, "no orders for user", http.StatusNoContent)
+		return
+	}
+	resp, err := json.Marshal(orders)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Write(resp)
+}
+func (handler *ServerHandler) GetBalanceHandler(rw http.ResponseWriter, request *http.Request) {
+
+}
+func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request *http.Request) {
+	newWithdraw := wm.Withdraw{}
+	if err := json.NewDecoder(request.Body).Decode(&newWithdraw); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+	newWithdraw.UploadData = time.Now()
+
+	id, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	newWithdraw.UserId = id
+
+	if !newWithdraw.CheckNumber() {
+		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
+		return
+	}
+
+	if wd, _ := handler.withdrawManager.GetWithdraw(request.Context(), newWithdraw.OrderNumber); wd != nil {
+		http.Error(rw, "withdraw for order already exist", http.StatusUnprocessableEntity)
+		return
+	}
+
+	err = handler.balanceManager.WithdrawUserAccural(request.Context(), id, newWithdraw.Sum)
+	if err != nil {
+		retCode := http.StatusInternalServerError
+		if errors.Is(err, balance.ErrBalanceNoEnoughBals) {
+			retCode = http.StatusPaymentRequired
+		}
+		http.Error(rw, err.Error(), retCode)
+		return
+	}
+
+	err = handler.withdrawManager.AddWithdraw(request.Context(), &newWithdraw)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
+}
+func (handler *ServerHandler) GetWithdrawAllHandler(rw http.ResponseWriter, request *http.Request) {
+	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	wdraws, err := handler.withdrawManager.GetAllWithdrawsForUser(request.Context(), userId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(*wdraws) == 0 {
+		http.Error(rw, "no withdraws for user", http.StatusNoContent)
+		return
+	}
+	resp, err := json.Marshal(wdraws)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Write(resp)
+}
 
 func (handler *ServerHandler) DefaultHandler(rw http.ResponseWriter, request *http.Request) {}

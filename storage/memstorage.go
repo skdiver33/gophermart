@@ -1,15 +1,15 @@
 package storage
 
 import (
-	"errors"
-
+	order "github.com/skdiver33/gophermart/internal/order"
 	user "github.com/skdiver33/gophermart/internal/user"
 )
 
 var count int
 
 type UserMemStorage struct {
-	users map[int]user.User
+	users  map[int]user.User
+	orders map[string]order.Order
 }
 
 func NewUserMemStorage() *UserMemStorage {
@@ -35,5 +35,14 @@ func (storage *UserMemStorage) GetUser(login string, password string) (*user.Use
 			return &val, nil
 		}
 	}
-	return nil, errors.New("user not found")
+	return nil, nil
+}
+
+func (storage *UserMemStorage) AddOrder(order *order.Order) error {
+
+	return nil
+}
+
+func (storage *UserMemStorage) GetOrder(number string) (*order.Order, error) {
+	return nil, nil
 }

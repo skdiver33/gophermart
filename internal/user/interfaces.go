@@ -1,15 +1,18 @@
 package user
 
+import "context"
+
 type UserManagerInterface interface {
-	UserRegister(data *User) (*User, error) //for successful add user to storage, setup user id and return it
-	UserAuth(data *User) (string, error)    // for succesfull return JWT
+	UserRegister(ctx context.Context, data *User) (*User, error) //for successful add user to storage, setup user id and return it
+	UserAuth(ctx context.Context, data *User) (string, error)    // for succesfull return JWT
 }
 
 type UserStorageInterface interface {
-	AddUser(user *User) (int, error)
-	GetUser(login string, password string) (*User, error)
+	AddUser(ctx context.Context, user *User) (int, error)
+	GetUser(ctx context.Context, login string, password string) (*User, error)
 }
 
 type AuthInterface interface {
 	CreateUserToken(userId int) (string, error)
+	GetUserIdFromClaims(ctx context.Context) (int, error)
 }

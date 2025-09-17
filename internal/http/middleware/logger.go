@@ -17,7 +17,7 @@ func NewServiceLogger() *ServiceLogger {
 		panic(err)
 	}
 	defer newLogger.Sync()
-	return &ServiceLogger{logger: newLogger}
+	return &ServiceLogger{logger: newLogger.Sugar()}
 }
 
 type (
