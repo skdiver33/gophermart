@@ -246,7 +246,7 @@ func (storage *SQLStorage) GetAllWithdrawsForUser(ctx context.Context, id int) (
 	return result, nil
 }
 
-func (storage *SQLStorage) GetUserBalance(ctx context.Context, userId int) (*balance.Balance, error) {
+func (storage *SQLStorage) GetUserBalance(ctx context.Context, userID int) (*balance.Balance, error) {
 	balance := balance.Balance{}
 	row := storage.db.QueryRowContext(ctx, "SELECT accrual,withdraw FROM balances WHERE user_id=$1", userId)
 	err := row.Scan(&balance.Amount, &balance.Withdraw)
@@ -255,14 +255,14 @@ func (storage *SQLStorage) GetUserBalance(ctx context.Context, userId int) (*bal
 	}
 	return &balance, nil
 }
-func (storage *SQLStorage) CreateUserBalance(ctx context.Context, userId int) error {
+func (storage *SQLStorage) CreateUserBalance(ctx context.Context, userID int) error {
 	_, err := storage.db.ExecContext(ctx, "INSERT INTO balances (user_id, accrual,withdraw) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", userId, 0, 0)
 	if err != nil {
 		return errors.New("error inserted new order to DB")
 	}
 	return nil
 }
-func (storage *SQLStorage) ChangeBalanceAddAccrual(ctx context.Context, userId int, accrual float32) error {
+func (storage *SQLStorage) ChangeBalanceAddAccrual(ctx context.Context, userID int, accrual float32) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
 		log.Print("error create transaction")
@@ -291,7 +291,7 @@ func (storage *SQLStorage) ChangeBalanceAddAccrual(ctx context.Context, userId i
 	return nil
 }
 
-func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userId int, sum float32) error {
+func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID int, sum float32) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
 		log.Print("error create transaction")
