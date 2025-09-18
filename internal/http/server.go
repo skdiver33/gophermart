@@ -46,7 +46,7 @@ func newServerConfig() *ServerConfig {
 		serverConfig.ListenAddress = envServerAddr
 	}
 
-	envDBAddr, ok := os.LookupEnv("DATABASE_DSN")
+	envDBAddr, ok := os.LookupEnv("DATABASE_URI")
 	if ok {
 		serverConfig.SQLDBAddress = envDBAddr
 	}
