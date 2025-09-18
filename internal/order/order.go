@@ -37,7 +37,7 @@ func (order *Order) LunaCheck() bool {
 	parity := nDigits % 2
 	for i := 0; i < nDigits; i++ {
 		digit := int(order.Number[i]) - '0'
-		if digit%2 == parity {
+		if i%2 == parity {
 			digit *= 2
 			if digit > 9 {
 				digit -= 9
