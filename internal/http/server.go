@@ -75,6 +75,7 @@ func NewServer() (*Server, error) {
 	withdrawManager := wm.NewWithdrawManager(storage)
 	balanceManager := bm.NewBalanceManager(storage)
 
+	log.Printf("pre start accrual client")
 	orderProcessor := loyalty.NewOrderProcessor(balanceManager, orderManager, loyalty.NewAccuralClientConfig(server.Config.AccrualAddress))
 	go orderProcessor.Start(context.TODO())
 

@@ -57,6 +57,7 @@ func NewSQLStorage(address string) (*SQLStorage, error) {
 func (storage *SQLStorage) InitializeConnection() error {
 	db, err := sql.Open("pgx", storage.config.DBAddress)
 	if err != nil {
+		log.Println("error open connection to DB")
 		return err
 	}
 	storage.db = db
