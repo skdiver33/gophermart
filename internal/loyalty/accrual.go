@@ -51,7 +51,7 @@ func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 			for j := 0; j < numJobs; j++ {
 				res := <-result
 				if strings.Contains(res.Status, "error") {
-					log.Printf("read res %v", res)
+					//log.Printf("read res %v", res)
 					continue
 				}
 				log.Printf("read res %v", res)

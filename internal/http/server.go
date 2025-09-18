@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -65,7 +66,8 @@ func NewServer() (*Server, error) {
 	auth := auth.NewAuth()
 	storage, err := storage.NewSQLStorage(server.Config.SQLDBAddress)
 	if err != nil {
-		return nil, fmt.Errorf("error creatr sql storage. %w", err)
+		log.Printf("error create new server. error create sql storage %s", err.Error())
+		return nil, fmt.Errorf("error create sql storage. %w", err)
 	}
 
 	userManager := um.NewUserManager(storage, auth)
@@ -83,19 +85,12 @@ func NewServer() (*Server, error) {
 	newRouter.Use(serverLoger.RequestLogger)
 
 	newRouter.Group(func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("welcome anonymous"))
-		})
 		r.Route("/api/user", func(r chi.Router) {
 			r.Post("/register", serverHandler.UserRegisterHandler)
 			r.Post("/login", serverHandler.UserLoginHandler)
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(auth.GetBaseToken()))
 				r.Use(jwtauth.Authenticator(auth.GetBaseToken()))
-				r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
-				})
 				r.Post("/orders", serverHandler.LoadOrderHandler)
 				r.Get("/orders", serverHandler.GetAllOrdersHandler)
 				r.Get("/balance", serverHandler.GetBalanceHandler)
