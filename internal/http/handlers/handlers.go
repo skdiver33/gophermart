@@ -100,7 +100,7 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 		return
 	}
 	newOrder.Number = string(body)
-	if !newOrder.CheckNumber() {
+	if !newOrder.LunaCheck() {
 		log.Printf("error check order number %v", newOrder.Number)
 		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
 		return
