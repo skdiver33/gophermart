@@ -22,25 +22,25 @@ var (
 	ErrBalanceNoEnoughBals = errors.New("no enought bals")
 )
 
-func (bm *BalanceManager) GetUserBalance(ctx context.Context, userId int) (*Balance, error) {
-	balance, err := bm.BalanceStorage.GetUserBalance(ctx, userId)
+func (bm *BalanceManager) GetUserBalance(ctx context.Context, userID int) (*Balance, error) {
+	balance, err := bm.BalanceStorage.GetUserBalance(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	return balance, nil
 }
 
-func (bm *BalanceManager) CreateUserBalance(ctx context.Context, userId int) error {
-	err := bm.BalanceStorage.CreateUserBalance(ctx, userId)
+func (bm *BalanceManager) CreateUserBalance(ctx context.Context, userID int) error {
+	err := bm.BalanceStorage.CreateUserBalance(ctx, userID)
 	return err
 }
 
-func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userId int, sum float32) error {
-	err := bm.BalanceStorage.ChangeBalanceAddWithdraw(ctx, userId, sum)
+func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userID int, sum float32) error {
+	err := bm.BalanceStorage.ChangeBalanceAddWithdraw(ctx, userID, sum)
 	return err
 }
 
-func (bm *BalanceManager) AddAmount(ctx context.Context, userId int, accrual float32) error {
-	err := bm.BalanceStorage.ChangeBalanceAddAccrual(ctx, userId, accrual)
+func (bm *BalanceManager) AddAmount(ctx context.Context, userID int, accrual float32) error {
+	err := bm.BalanceStorage.ChangeBalanceAddAccrual(ctx, userID, accrual)
 	return err
 }

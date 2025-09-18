@@ -36,7 +36,7 @@ func (manager *UserManager) UserRegister(ctx context.Context, data *User) (*User
 	if err != nil {
 		return nil, fmt.Errorf("error add user to storage %w,%w", ErrInternal, err)
 	}
-	newUser.Id = id
+	newUser.ID = id
 	return newUser, nil
 }
 
@@ -49,7 +49,7 @@ func (manager *UserManager) UserAuth(ctx context.Context, data *User) (string, e
 	if user == nil {
 		return "", ErrUserWithCredNotFound
 	}
-	userAuthToken, err := manager.Authenticator.CreateUserToken(user.Id)
+	userAuthToken, err := manager.Authenticator.CreateUserToken(user.ID)
 	if err != nil {
 		return "", fmt.Errorf("error. Cannot create user authentication token. %w %w", ErrInternal, err)
 	}

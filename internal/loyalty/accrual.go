@@ -56,7 +56,7 @@ func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 				}
 				log.Printf("read res %v", res)
 				//log.Printf("processed orders  %v", orderInProc)
-				processor.BalanceManager.AddAmount(ctx, orderInProc[res.Order].UserId, res.Accrual)
+				processor.BalanceManager.AddAmount(ctx, orderInProc[res.Order].UserID, res.Accrual)
 				processor.OrderManager.UpdateOrderStatus(ctx, res.Order, res.Status, res.Accrual)
 			}
 			close(result)

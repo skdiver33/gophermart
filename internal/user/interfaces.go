@@ -13,6 +13,6 @@ type UserStorageInterface interface {
 }
 
 type AuthInterface interface {
-	CreateUserToken(userId int) (string, error)
-	GetUserIdFromClaims(ctx context.Context) (int, error)
+	CreateUserToken(userID int) (string, error)
+	GetUserIDFromClaims(ctx context.Context) (int, error)
 }

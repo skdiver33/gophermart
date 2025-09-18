@@ -52,7 +52,7 @@ func (handler *ServerHandler) UserRegisterHandler(rw http.ResponseWriter, reques
 		http.Error(rw, err.Error(), returnStatus)
 		return
 	}
-	err = handler.balanceManager.CreateUserBalance(request.Context(), user.Id)
+	err = handler.balanceManager.CreateUserBalance(request.Context(), user.ID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,7 +107,7 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 		return
 	}
 
-	newOrder.UserId, err = handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	newOrder.UserID, err = handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		log.Printf("error get user id from token")
@@ -132,13 +132,13 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 }
 func (handler *ServerHandler) GetAllOrdersHandler(rw http.ResponseWriter, request *http.Request) {
 
-	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	userID, err := handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	orders, err := handler.orderManager.GetAllOrdersForUser(request.Context(), userId)
+	orders, err := handler.orderManager.GetAllOrdersForUser(request.Context(), userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,12 +158,12 @@ func (handler *ServerHandler) GetAllOrdersHandler(rw http.ResponseWriter, reques
 	rw.Write(resp)
 }
 func (handler *ServerHandler) GetBalanceHandler(rw http.ResponseWriter, request *http.Request) {
-	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	userID, err := handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	balance, err := handler.balanceManager.GetUserBalance(request.Context(), userId)
+	balance, err := handler.balanceManager.GetUserBalance(request.Context(), userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -186,12 +186,12 @@ func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request
 	}
 	newWithdraw.UploadData = time.Now()
 
-	id, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	id, err := handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	newWithdraw.UserId = id
+	newWithdraw.UserID = id
 
 	if !newWithdraw.CheckNumber() {
 		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
@@ -221,13 +221,13 @@ func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request
 	rw.WriteHeader(http.StatusOK)
 }
 func (handler *ServerHandler) GetWithdrawAllHandler(rw http.ResponseWriter, request *http.Request) {
-	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	userID, err := handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	wdraws, err := handler.withdrawManager.GetAllWithdrawsForUser(request.Context(), userId)
+	wdraws, err := handler.withdrawManager.GetAllWithdrawsForUser(request.Context(), userID)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return

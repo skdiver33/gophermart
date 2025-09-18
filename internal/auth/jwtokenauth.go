@@ -30,27 +30,27 @@ func (auth *Auth) GetBaseToken() *jwtauth.JWTAuth {
 	return auth.baseTokenAuth
 }
 
-func (auth *Auth) CreateUserToken(userId int) (string, error) {
-	_, tokenString, err := auth.baseTokenAuth.Encode(map[string]interface{}{"user_id": strconv.Itoa(userId), "exp": time.Now().Add(2 * time.Hour)})
+func (auth *Auth) CreateUserToken(userID int) (string, error) {
+	_, tokenString, err := auth.baseTokenAuth.Encode(map[string]interface{}{"user_id": strconv.Itoa(userID), "exp": time.Now().Add(2 * time.Hour)})
 	if err != nil {
 		return "", fmt.Errorf("error create user token. %w", err)
 	}
 	return tokenString, nil
 }
 
-func (auth *Auth) GetUserIdFromClaims(ctx context.Context) (int, error) {
+func (auth *Auth) GetUserIDFromClaims(ctx context.Context) (int, error) {
 	_, claims, _ := jwtauth.FromContext(ctx)
-	userIdValue, ok := claims["user_id"]
+	userIDValue, ok := claims["user_id"]
 	if !ok {
-		return -1, errors.New("userId not found in JWT claims")
+		return -1, errors.New("userID not found in JWT claims")
 	}
-	userIdStr, ok := userIdValue.(string)
+	userIDStr, ok := userIDValue.(string)
 	if !ok {
-		return -1, errors.New("userId in JWT claims is not string")
+		return -1, errors.New("userID in JWT claims is not string")
 	}
-	userId, err := strconv.Atoi(userIdStr)
+	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		return -1, errors.New("error convert user id from string to int")
 	}
-	return userId, nil
+	return userID, nil
 }

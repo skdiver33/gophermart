@@ -79,7 +79,7 @@ func (storage *SQLStorage) GetUser(ctx context.Context, login string, password s
 
 	user := user.User{}
 	row := storage.db.QueryRowContext(ctx, "SELECT * FROM users WHERE login=$1", login)
-	err := row.Scan(&user.Id, &user.Login, &user.Password)
+	err := row.Scan(&user.ID, &user.Login, &user.Password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -90,7 +90,7 @@ func (storage *SQLStorage) GetUser(ctx context.Context, login string, password s
 }
 
 func (storage *SQLStorage) AddOrder(ctx context.Context, order *order.Order) error {
-	_, err := storage.db.ExecContext(ctx, "INSERT INTO orders (order_number,user_id, status,accrual,upload_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING", order.Number, order.UserId, order.Status, order.Accrual, order.UploadData.Format(time.RFC3339))
+	_, err := storage.db.ExecContext(ctx, "INSERT INTO orders (order_number,user_id, status,accrual,upload_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING", order.Number, order.UserID, order.Status, order.Accrual, order.UploadData.Format(time.RFC3339))
 	if err != nil {
 		return errors.New("error inserted new order to DB")
 	}
@@ -101,7 +101,7 @@ func (storage *SQLStorage) GetOrder(ctx context.Context, number string) (*order.
 	order := order.Order{}
 	row := storage.db.QueryRowContext(ctx, "SELECT * FROM orders WHERE order_number=$1", number)
 	var timeStr string
-	err := row.Scan(&order.Number, &order.UserId, &order.Status, &order.Accrual, &timeStr)
+	err := row.Scan(&order.Number, &order.UserID, &order.Status, &order.Accrual, &timeStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -115,7 +115,7 @@ func (storage *SQLStorage) GetOrder(ctx context.Context, number string) (*order.
 	return &order, nil
 }
 
-func (storage *SQLStorage) GetAllOrderForId(ctx context.Context, id int) ([]order.Order, error) {
+func (storage *SQLStorage) GetAllOrderForID(ctx context.Context, id int) ([]order.Order, error) {
 
 	rows, err := storage.db.QueryContext(ctx, "SELECT order_number,status,accrual,upload_data FROM orders where user_id = $1", id)
 	if err != nil {
@@ -160,7 +160,7 @@ func (storage *SQLStorage) GetUnprocOrders(ctx context.Context) ([]order.Order, 
 	for rows.Next() {
 		curOrder := order.Order{}
 		var upload string
-		if err := rows.Scan(&curOrder.Number, &curOrder.UserId, &curOrder.Status, &curOrder.Accrual, &upload); err != nil {
+		if err := rows.Scan(&curOrder.Number, &curOrder.UserID, &curOrder.Status, &curOrder.Accrual, &upload); err != nil {
 
 			return nil, fmt.Errorf("error parse result from DB %w", err)
 		}
@@ -189,7 +189,7 @@ func (storage *SQLStorage) UpdateOrderStatus(ctx context.Context, orderNumber st
 }
 
 func (storage *SQLStorage) AddWithdraw(ctx context.Context, withdraw *withdraw.Withdraw) error {
-	_, err := storage.db.ExecContext(ctx, "INSERT INTO withdraws (order_number,user_id, sum,upload_data) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", withdraw.OrderNumber, withdraw.UserId, withdraw.Sum, withdraw.UploadData.Format(time.RFC3339))
+	_, err := storage.db.ExecContext(ctx, "INSERT INTO withdraws (order_number,user_id, sum,upload_data) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", withdraw.OrderNumber, withdraw.UserID, withdraw.Sum, withdraw.UploadData.Format(time.RFC3339))
 	if err != nil {
 		return errors.New("error inserted new order to DB")
 	}
@@ -200,7 +200,7 @@ func (storage *SQLStorage) GetWithdraw(ctx context.Context, number string) (*wit
 	withdraw := withdraw.Withdraw{OrderNumber: number}
 	row := storage.db.QueryRowContext(ctx, "SELECT * FROM withdraws WHERE order_number=$1", number)
 	var timeStr string
-	err := row.Scan(&withdraw.OrderNumber, &withdraw.UserId, &withdraw.Sum, &timeStr)
+	err := row.Scan(&withdraw.OrderNumber, &withdraw.UserID, &withdraw.Sum, &timeStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -225,7 +225,7 @@ func (storage *SQLStorage) GetAllWithdrawsForUser(ctx context.Context, id int) (
 	result := make([]withdraw.Withdraw, 0)
 
 	for rows.Next() {
-		curWithdraw := withdraw.Withdraw{UserId: id}
+		curWithdraw := withdraw.Withdraw{UserID: id}
 		var upload string
 		if err := rows.Scan(&curWithdraw.OrderNumber, &curWithdraw.Sum, &upload); err != nil {
 
@@ -248,7 +248,7 @@ func (storage *SQLStorage) GetAllWithdrawsForUser(ctx context.Context, id int) (
 
 func (storage *SQLStorage) GetUserBalance(ctx context.Context, userID int) (*balance.Balance, error) {
 	balance := balance.Balance{}
-	row := storage.db.QueryRowContext(ctx, "SELECT accrual,withdraw FROM balances WHERE user_id=$1", userId)
+	row := storage.db.QueryRowContext(ctx, "SELECT accrual,withdraw FROM balances WHERE user_id=$1", userID)
 	err := row.Scan(&balance.Amount, &balance.Withdraw)
 	if err != nil {
 		return nil, err
@@ -256,7 +256,7 @@ func (storage *SQLStorage) GetUserBalance(ctx context.Context, userID int) (*bal
 	return &balance, nil
 }
 func (storage *SQLStorage) CreateUserBalance(ctx context.Context, userID int) error {
-	_, err := storage.db.ExecContext(ctx, "INSERT INTO balances (user_id, accrual,withdraw) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", userId, 0, 0)
+	_, err := storage.db.ExecContext(ctx, "INSERT INTO balances (user_id, accrual,withdraw) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", userID, 0, 0)
 	if err != nil {
 		return errors.New("error inserted new order to DB")
 	}
@@ -271,15 +271,15 @@ func (storage *SQLStorage) ChangeBalanceAddAccrual(ctx context.Context, userID i
 	defer tx.Rollback()
 
 	currentAccrual := float32(0)
-	row := tx.QueryRowContext(ctx, "SELECT accrual FROM balances WHERE user_id = $1 FOR UPDATE", userId)
+	row := tx.QueryRowContext(ctx, "SELECT accrual FROM balances WHERE user_id = $1 FOR UPDATE", userID)
 	err = row.Scan(&currentAccrual)
 	if err != nil {
-		log.Printf("error get current accrual for update for userid %d", userId)
+		log.Printf("error get current accrual for update for userid %d", userID)
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE balances SET accrual = $1 WHERE user_id = $2", currentAccrual+accrual, userId)
+	_, err = tx.ExecContext(ctx, "UPDATE balances SET accrual = $1 WHERE user_id = $2", currentAccrual+accrual, userID)
 	if err != nil {
-		log.Printf("error update balance for userid %d, %s", userId, err.Error())
+		log.Printf("error update balance for userid %d, %s", userID, err.Error())
 		return err
 	}
 
@@ -300,7 +300,7 @@ func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID 
 	defer tx.Rollback()
 
 	currentBalance := balance.Balance{}
-	row := tx.QueryRowContext(ctx, "SELECT accrual,withdraw FROM balances WHERE user_id = $1 FOR UPDATE", userId)
+	row := tx.QueryRowContext(ctx, "SELECT accrual,withdraw FROM balances WHERE user_id = $1 FOR UPDATE", userID)
 	err = row.Scan(&currentBalance.Amount, &currentBalance.Withdraw)
 	if err != nil {
 		log.Print("error get current balance for withdraw")
@@ -310,7 +310,7 @@ func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID 
 		return balance.ErrBalanceNoEnoughBals
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE balances SET accrual = $1, withdraw = $2 WHERE user_id = $3", currentBalance.Amount-sum, currentBalance.Withdraw+sum, userId)
+	_, err = tx.ExecContext(ctx, "UPDATE balances SET accrual = $1, withdraw = $2 WHERE user_id = $3", currentBalance.Amount-sum, currentBalance.Withdraw+sum, userID)
 	if err != nil {
 		log.Print("error update balance")
 		return err

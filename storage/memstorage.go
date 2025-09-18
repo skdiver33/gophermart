@@ -22,10 +22,10 @@ func init() {
 }
 
 func (storage *UserMemStorage) AddUser(user *user.User) (int, error) {
-	user.Id = count
+	user.ID = count
 	storage.users[count] = *user
 	count++
-	return user.Id, nil
+	return user.ID, nil
 
 }
 

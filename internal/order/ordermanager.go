@@ -32,7 +32,7 @@ func (om *OrderManager) LoadOrder(ctx context.Context, newOrder *Order) error {
 		}
 		return nil
 	}
-	if order.UserId != newOrder.UserId {
+	if order.UserID != newOrder.UserID {
 		return ErrOrderLoadAnotherUser
 	}
 	newOrder.Status = order.Status
@@ -40,7 +40,7 @@ func (om *OrderManager) LoadOrder(ctx context.Context, newOrder *Order) error {
 }
 
 func (om *OrderManager) GetAllOrdersForUser(ctx context.Context, id int) (*[]Order, error) {
-	allOrders, err := om.OrderStorage.GetAllOrderForId(ctx, id)
+	allOrders, err := om.OrderStorage.GetAllOrderForID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("error get all order %w", err)
 	}

@@ -7,7 +7,7 @@ import (
 
 type Withdraw struct {
 	OrderNumber string    `json:"order,omitempty"`
-	UserId      int       `json:"-"`
+	UserID      int       `json:"-"`
 	Sum         float32   `json:"sum,omitempty"`
 	UploadData  time.Time `json:"processed_at,omitempty"`
 }
