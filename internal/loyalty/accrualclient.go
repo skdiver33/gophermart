@@ -9,10 +9,10 @@ import (
 )
 
 type AccrualForOrder struct {
-	Order         string `json:"order"`
-	Status        string `json:"status"`
-	Accural       int    `json:"accural,omitempty"`
-	RetryInterval int    `json:"retry,omitempty"`
+	Order         string  `json:"order"`
+	Status        string  `json:"status"`
+	Accrual       float32 `json:"accrual,omitempty"`
+	RetryInterval int     `json:"retry,omitempty"`
 }
 
 type AccrualClient struct {
@@ -29,9 +29,8 @@ var (
 	ErrAccruallInternalServError    = errors.New("internal error accrual service")
 )
 
-func NewAccuralClientConfig() *AccrualClientConfig {
-	address := "localhost:8000"
-	return &AccrualClientConfig{address: address}
+func NewAccuralClientConfig(accrualAddress string) *AccrualClientConfig {
+	return &AccrualClientConfig{address: accrualAddress}
 }
 
 func NewAccuralClient(config *AccrualClientConfig) *AccrualClient {
@@ -39,7 +38,7 @@ func NewAccuralClient(config *AccrualClientConfig) *AccrualClient {
 }
 
 func (client *AccrualClient) GetAccural(number string) (*AccrualForOrder, error) {
-	requestPattern := "http://%s/api/orders/%s"
+	requestPattern := "%s/api/orders/%s"
 	tr := &http.Transport{}
 	httpClient := &http.Client{Transport: tr}
 	response, err := httpClient.Get(fmt.Sprintf(requestPattern, client.config.address, number))

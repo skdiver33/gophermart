@@ -2,8 +2,10 @@ package http
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/jwtauth/v5"
@@ -24,11 +26,36 @@ type Server struct {
 }
 
 type ServerConfig struct {
-	ListenAddress string
+	ListenAddress  string
+	SQLDBAddress   string
+	AccrualAddress string
 }
 
 func newServerConfig() *ServerConfig {
-	return &ServerConfig{ListenAddress: "localhost:8080"}
+
+	serverConfig := ServerConfig{}
+	serverFlags := flag.NewFlagSet("Server config flags", flag.ContinueOnError)
+	serverFlags.StringVar(&serverConfig.ListenAddress, "a", "localhost:8000", "address for start server in form ip:port. default localhost:8080")
+	serverFlags.StringVar(&serverConfig.SQLDBAddress, "d", "postgres://gophermart:secret@192.168.1.48:5432/gophermart?sslmode=disable", "DB connection string. Default - empty and disable.")
+	serverFlags.StringVar(&serverConfig.AccrualAddress, "r", "localhost:8080", "accrual system address")
+	serverFlags.Parse(os.Args[1:])
+
+	envServerAddr, ok := os.LookupEnv("RUN_ADDRESS")
+	if ok {
+		serverConfig.ListenAddress = envServerAddr
+	}
+
+	envDBAddr, ok := os.LookupEnv("DATABASE_DSN")
+	if ok {
+		serverConfig.SQLDBAddress = envDBAddr
+	}
+
+	envAccrualAddr, ok := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS")
+	if ok {
+		serverConfig.AccrualAddress = envAccrualAddr
+	}
+
+	return &serverConfig
 }
 
 func NewServer() (*Server, error) {
@@ -36,7 +63,7 @@ func NewServer() (*Server, error) {
 	server.Config = newServerConfig()
 
 	auth := auth.NewAuth()
-	storage, err := storage.NewSQLStorage("postgres://gophermart:secret@192.168.1.48:5432/gophermart?sslmode=disable")
+	storage, err := storage.NewSQLStorage(server.Config.SQLDBAddress)
 	if err != nil {
 		return nil, fmt.Errorf("error creatr sql storage. %w", err)
 	}
@@ -46,7 +73,7 @@ func NewServer() (*Server, error) {
 	withdrawManager := wm.NewWithdrawManager(storage)
 	balanceManager := bm.NewBalanceManager(storage)
 
-	orderProcessor := loyalty.NewOrderProcessor(balanceManager, orderManager, loyalty.NewAccuralClientConfig())
+	orderProcessor := loyalty.NewOrderProcessor(balanceManager, orderManager, loyalty.NewAccuralClientConfig(server.Config.AccrualAddress))
 	go orderProcessor.Start(context.TODO())
 
 	serverHandler := handler.NewServerHandler(userManager, orderManager, withdrawManager, balanceManager)

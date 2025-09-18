@@ -8,19 +8,19 @@ CREATE TABLE IF NOT EXISTS orders(
     order_number VARCHAR (50)  PRIMARY KEY,
     user_id INTEGER NOT NULL,
     status VARCHAR (50) NOT NULL,
-    accrual INTEGER,
+    accrual REAL,
     upload_data VARCHAR (50) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS withdraws(
     order_number VARCHAR (50)  PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    sum INTEGER NOT NULL,
+    sum REAL NOT NULL,
     upload_data VARCHAR (50) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS balances(
     user_id INTEGER PRIMARY KEY,
-    accrual INTEGER NOT NULL,
-    withdraw INTEGER NOT NULL
+    accrual REAL NOT NULL,
+    withdraw REAL NOT NULL
 );

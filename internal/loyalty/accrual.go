@@ -3,6 +3,7 @@ package loyalty
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -28,7 +29,7 @@ func (processor *OrderProcessor) Start(ctx context.Context) {
 }
 
 func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
-	numWorkers := 10
+	numWorkers := 1
 	select {
 	case <-ctx.Done():
 		return
@@ -50,10 +51,13 @@ func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 			for j := 0; j < numJobs; j++ {
 				res := <-result
 				if strings.Contains(res.Status, "error") {
+					log.Printf("read res %v", res)
 					continue
 				}
-				processor.BalanceManager.AddAmount(ctx, orderInProc[res.Order].UserId, res.Accural)
-				processor.OrderManager.UpdateOrderStatus(ctx, res.Order, res.Status, res.Accural)
+				log.Printf("read res %v", res)
+				//log.Printf("processed orders  %v", orderInProc)
+				processor.BalanceManager.AddAmount(ctx, orderInProc[res.Order].UserId, res.Accrual)
+				processor.OrderManager.UpdateOrderStatus(ctx, res.Order, res.Status, res.Accrual)
 			}
 			close(result)
 
@@ -73,6 +77,7 @@ func worker(ctx context.Context, client *AccrualClient, jobs <-chan string, res 
 				if err != nil {
 					//log.Default("Error get accrual")
 					res <- AccrualForOrder{Status: fmt.Sprintf("error %s", err.Error())}
+					break
 				}
 				if accrualResult.RetryInterval != 0 {
 					time.Sleep(time.Second * time.Duration(accrualResult.RetryInterval))

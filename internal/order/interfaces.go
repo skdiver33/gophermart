@@ -7,5 +7,5 @@ type OrderStorageInterface interface {
 	GetOrder(ctx context.Context, number string) (*Order, error)
 	GetAllOrderForId(ctx context.Context, id int) ([]Order, error)
 	GetUnprocOrders(ctx context.Context) ([]Order, error)
-	UpdateOrderStatus(ctx context.Context, orderNumber string, newStatus string, accrual int) error
+	UpdateOrderStatus(ctx context.Context, orderNumber string, newStatus string, accrual float32) error
 }

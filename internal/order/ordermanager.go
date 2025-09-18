@@ -18,6 +18,7 @@ func NewOrderManager(storage OrderStorageInterface) *OrderManager {
 
 var (
 	ErrOrderLoadAnotherUser = errors.New("order load another user")
+	ErrOrderAlreadyLoad     = errors.New("order already load")
 )
 
 func (om *OrderManager) LoadOrder(ctx context.Context, newOrder *Order) error {
@@ -34,8 +35,8 @@ func (om *OrderManager) LoadOrder(ctx context.Context, newOrder *Order) error {
 	if order.UserId != newOrder.UserId {
 		return ErrOrderLoadAnotherUser
 	}
-
-	return nil
+	newOrder.Status = order.Status
+	return ErrOrderAlreadyLoad
 }
 
 func (om *OrderManager) GetAllOrdersForUser(ctx context.Context, id int) (*[]Order, error) {
@@ -65,7 +66,7 @@ func (om *OrderManager) GetAllUnprocOrders(ctx context.Context) (map[string]Orde
 	return resultMap, nil
 }
 
-func (om *OrderManager) UpdateOrderStatus(ctx context.Context, orderNumber string, newStatus string, accrual int) error {
+func (om *OrderManager) UpdateOrderStatus(ctx context.Context, orderNumber string, newStatus string, accrual float32) error {
 	err := om.OrderStorage.UpdateOrderStatus(ctx, orderNumber, newStatus, accrual)
 	if err != nil {
 		return fmt.Errorf("error update status for order. %w", err)

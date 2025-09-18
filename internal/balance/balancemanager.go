@@ -6,8 +6,8 @@ import (
 )
 
 type Balance struct {
-	Amount   int
-	Withdraw int
+	Amount   float32 `json:"current"`
+	Withdraw float32 `json:"withdrawn"`
 }
 
 type BalanceManager struct {
@@ -35,12 +35,12 @@ func (bm *BalanceManager) CreateUserBalance(ctx context.Context, userId int) err
 	return err
 }
 
-func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userId int, sum int) error {
+func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userId int, sum float32) error {
 	err := bm.BalanceStorage.ChangeBalanceAddWithdraw(ctx, userId, sum)
 	return err
 }
 
-func (bm *BalanceManager) AddAmount(ctx context.Context, userId int, accrual int) error {
+func (bm *BalanceManager) AddAmount(ctx context.Context, userId int, accrual float32) error {
 	err := bm.BalanceStorage.ChangeBalanceAddAccrual(ctx, userId, accrual)
 	return err
 }

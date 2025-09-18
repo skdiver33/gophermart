@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -57,7 +58,7 @@ func (handler *ServerHandler) UserRegisterHandler(rw http.ResponseWriter, reques
 		return
 	}
 	cookie := http.Cookie{}
-	cookie.Name = "accessToken"
+	cookie.Name = "jwt"
 	cookie.Value = userAuthToken
 	http.SetCookie(rw, &cookie)
 	rw.Header().Set("Content-Type", "application/text-plain")
@@ -80,7 +81,7 @@ func (handler *ServerHandler) UserLoginHandler(rw http.ResponseWriter, request *
 		return
 	}
 	cookie := http.Cookie{}
-	cookie.Name = "accessToken"
+	cookie.Name = "jwt"
 	cookie.Value = userAuthToken
 	http.SetCookie(rw, &cookie)
 	rw.Header().Set("Content-Type", "application/text-plain")
@@ -96,10 +97,12 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		log.Printf("error read upload body %s", err.Error())
 		return
 	}
 	newOrder.Number = string(body)
 	if !newOrder.CheckNumber() {
+		log.Printf("error check order number %v", newOrder.Number)
 		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
 		return
 	}
@@ -107,6 +110,7 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 	newOrder.UserId, err = handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		log.Printf("error get user id from token")
 		return
 	}
 
@@ -116,14 +120,14 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 		if errors.Is(err, om.ErrOrderLoadAnotherUser) {
 			returnCode = http.StatusConflict
 		}
+		if errors.Is(err, om.ErrOrderAlreadyLoad) {
+			returnCode = http.StatusOK
+		}
 		http.Error(rw, err.Error(), returnCode)
 		return
 	}
-	returnCode := http.StatusOK
-	if newOrder.Status != om.OrderStatusNew {
-		returnCode = http.StatusAccepted
-	}
-	rw.WriteHeader(returnCode)
+
+	rw.WriteHeader(http.StatusAccepted)
 
 }
 func (handler *ServerHandler) GetAllOrdersHandler(rw http.ResponseWriter, request *http.Request) {
@@ -154,6 +158,24 @@ func (handler *ServerHandler) GetAllOrdersHandler(rw http.ResponseWriter, reques
 	rw.Write(resp)
 }
 func (handler *ServerHandler) GetBalanceHandler(rw http.ResponseWriter, request *http.Request) {
+	userId, err := handler.userManager.Authenticator.GetUserIdFromClaims(request.Context())
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	balance, err := handler.balanceManager.GetUserBalance(request.Context(), userId)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp, err := json.Marshal(balance)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Write(resp)
 
 }
 func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request *http.Request) {
