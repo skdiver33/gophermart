@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/skdiver33/gophermart/internal/balance"
 	bm "github.com/skdiver33/gophermart/internal/balance"
 	om "github.com/skdiver33/gophermart/internal/order"
 	um "github.com/skdiver33/gophermart/internal/user"
@@ -206,7 +205,7 @@ func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request
 	err = handler.balanceManager.WithdrawUserAccural(request.Context(), id, newWithdraw.Sum)
 	if err != nil {
 		retCode := http.StatusInternalServerError
-		if errors.Is(err, balance.ErrBalanceNoEnoughBals) {
+		if errors.Is(err, bm.ErrBalanceNoEnoughBals) {
 			retCode = http.StatusPaymentRequired
 		}
 		http.Error(rw, err.Error(), retCode)
