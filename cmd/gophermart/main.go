@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	server "github.com/skdiver33/gophermart/internal/http"
+	server "github.com/skdiver33/gophermart/internal/server"
 )
 
 func main() {

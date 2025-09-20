@@ -60,6 +60,10 @@ func (storage *SQLStorage) InitializeConnection() error {
 		log.Println("error open connection to DB")
 		return err
 	}
+	if err = db.Ping(); err != nil {
+		return err
+	}
+
 	storage.db = db
 	return nil
 }

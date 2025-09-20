@@ -12,7 +12,7 @@ type AccrualForOrder struct {
 	Order         string  `json:"order"`
 	Status        string  `json:"status"`
 	Accrual       float32 `json:"accrual,omitempty"`
-	RetryInterval int     `json:"retry,omitempty"`
+	RetryInterval int     `json:"-"`
 }
 
 type AccrualClient struct {
@@ -27,6 +27,8 @@ var (
 	ErrAccruallOrderNotExist        = errors.New("order not load in accruall system")
 	ErrAccruallNumberRequestExceeds = errors.New("number or request in exceeeds")
 	ErrAccruallInternalServError    = errors.New("internal error accrual service")
+	ErrAccruallErrorDecodeAnswer    = errors.New("cannot decode accrual system answer")
+	ErrAccruallNetworkError         = errors.New("cannot send request to accrual system")
 )
 
 func NewAccuralClientConfig(accrualAddress string) *AccrualClientConfig {
@@ -43,14 +45,14 @@ func (client *AccrualClient) GetAccural(number string) (*AccrualForOrder, error)
 	httpClient := &http.Client{Transport: tr}
 	response, err := httpClient.Get(fmt.Sprintf(requestPattern, client.config.address, number))
 	if err != nil {
-		return nil, fmt.Errorf("error send GET request. error:  %w", err)
+		return nil, fmt.Errorf("%w error:  %w", ErrAccruallNetworkError, err)
 	}
 	defer response.Body.Close()
 	accuralData := AccrualForOrder{}
 	switch response.StatusCode {
 	case 200:
 		if err := json.NewDecoder(response.Body).Decode(&accuralData); err != nil {
-			return nil, fmt.Errorf("error decode accural response. error:  %w", err)
+			return nil, fmt.Errorf("%w. error:  %w", ErrAccruallErrorDecodeAnswer, err)
 		}
 	case 204:
 		return nil, ErrAccruallOrderNotExist
@@ -58,10 +60,10 @@ func (client *AccrualClient) GetAccural(number string) (*AccrualForOrder, error)
 		retry := response.Header.Get("Retry-After")
 		retryInterval, err := strconv.Atoi(retry)
 		if err != nil {
-			return nil, fmt.Errorf("error conver retry interval fro header. error:  %w", err)
+			return nil, fmt.Errorf("%w. error convert retry interval from header. error:  %w", ErrAccruallErrorDecodeAnswer, err)
 		}
 		accuralData.RetryInterval = retryInterval
-		return &accuralData, ErrAccruallNumberRequestExceeds
+		return &accuralData, nil
 	case 500:
 		return nil, ErrAccruallInternalServError
 	}

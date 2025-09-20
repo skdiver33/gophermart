@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users(
     user_id serial PRIMARY KEY,
     login VARCHAR (50) UNIQUE NOT NULL,
-    password VARCHAR (50) NOT NULL
+    password VARCHAR (64) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS orders(
