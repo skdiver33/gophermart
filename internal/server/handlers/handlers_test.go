@@ -211,7 +211,9 @@ func TestServerHandler_LoadOrderHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.LoadOrderHandler(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 			assert.Equal(t, tt.wantCode, res.StatusCode)
+
 		})
 	}
 	sqlStorage.CloseAndClean().Error()
