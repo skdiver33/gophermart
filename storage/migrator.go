@@ -33,16 +33,24 @@ func NewMigrator(db *sql.DB) (*Migrator, error) {
 	return &Migrator{srcDriver: d, srcDB: postgresDrv}, nil
 }
 
-func (m *Migrator) ApplyMigrations() error {
+func (m *Migrator) ApplyMigrations(migrType string) error {
 
 	migrateInstance, err := migrate.NewWithInstance("migration_embeded_sql_files", m.srcDriver, "psql_db", m.srcDB)
 	if err != nil {
 		return fmt.Errorf("unable to create migration: %v", err)
 	}
 
-	if err = migrateInstance.Up(); err != nil {
-		return fmt.Errorf("unable to apply migrations %w", err)
+	switch migrType {
+	case "up":
+		if err = migrateInstance.Up(); err != nil {
+			return fmt.Errorf("unable to apply Up migrations %w", err)
+		}
+	case "down":
+		if err = migrateInstance.Down(); err != nil {
+			return fmt.Errorf("unable to apply Down migrations %w", err)
+		}
 	}
+
 	m.srcDriver.Close()
 	return nil
 }

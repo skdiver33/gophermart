@@ -49,6 +49,9 @@ func (manager *UserManager) UserAuth(ctx context.Context, data *User) (string, e
 	if user == nil {
 		return "", ErrUserWithCredNotFound
 	}
+	if user.Password != data.Password {
+		return "", ErrUserWithCredNotFound
+	}
 	userAuthToken, err := manager.Authenticator.CreateUserToken(user.ID)
 	if err != nil {
 		return "", fmt.Errorf("error. Cannot create user authentication token. %w %w", ErrInternal, err)

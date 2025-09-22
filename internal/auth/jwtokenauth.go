@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -42,7 +43,9 @@ func (auth *Auth) GetUserIDFromClaims(ctx context.Context) (int, error) {
 	_, claims, _ := jwtauth.FromContext(ctx)
 	userIDValue, ok := claims["user_id"]
 	if !ok {
+		log.Println(claims)
 		return -1, errors.New("userID not found in JWT claims")
+
 	}
 	userIDStr, ok := userIDValue.(string)
 	if !ok {

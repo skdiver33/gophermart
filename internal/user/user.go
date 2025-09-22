@@ -6,9 +6,9 @@ import (
 )
 
 type User struct {
-	Login    string `json:"login,omitempty"`
-	Password string `json:"password,omitempty"`
-	ID       int    `json:"id,omitempty"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	ID       int    `json:"-"`
 }
 
 func (user *User) CryptPasswd() {

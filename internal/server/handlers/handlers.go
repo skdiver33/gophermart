@@ -70,7 +70,6 @@ func (handler *ServerHandler) UserRegisterHandler(rw http.ResponseWriter, reques
 func (handler *ServerHandler) UserLoginHandler(rw http.ResponseWriter, request *http.Request) {
 	userData := um.User{}
 	if err := json.NewDecoder(request.Body).Decode(&userData); err != nil {
-		log.Printf("error user login.  %s", err.Error())
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -112,7 +111,9 @@ func (handler *ServerHandler) LoadOrderHandler(rw http.ResponseWriter, request *
 		http.Error(rw, "wrong order number format", http.StatusUnprocessableEntity)
 		return
 	}
+
 	newOrder.UserID, err = handler.userManager.Authenticator.GetUserIDFromClaims(request.Context())
+
 	if err != nil {
 		log.Printf("error get user ID from JWT %s", err.Error())
 		http.Error(rw, err.Error(), http.StatusInternalServerError)

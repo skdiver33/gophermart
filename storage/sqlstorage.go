@@ -43,7 +43,7 @@ func NewSQLStorage(address string) (*SQLStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = migrator.ApplyMigrations()
+	err = migrator.ApplyMigrations("up")
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return nil, err
 	}
@@ -60,11 +60,26 @@ func (storage *SQLStorage) InitializeConnection() error {
 		log.Println("error open connection to DB")
 		return err
 	}
-	if err = db.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	if err = db.PingContext(ctx); err != nil {
+		cancel()
 		return err
 	}
-
+	defer cancel()
 	storage.db = db
+	return nil
+}
+
+func (storage *SQLStorage) CloseAndClean() error {
+	migrator, err := NewMigrator(storage.db)
+	if err != nil {
+		return err
+	}
+	err = migrator.ApplyMigrations("down")
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+	storage.db.Close()
 	return nil
 }
 

@@ -2,3 +2,4 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS withdraws;
 DROP TABLE IF EXISTS balances;
+DROP TABLE IF EXISTS schema_migrations;

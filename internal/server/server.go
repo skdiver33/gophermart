@@ -67,10 +67,8 @@ func NewServer() (*Server, error) {
 	orderManager := om.NewOrderManager(storage)
 	withdrawManager := wm.NewWithdrawManager(storage)
 	balanceManager := bm.NewBalanceManager(storage)
-
-	log.Printf("pre start accrual client")
 	orderProcessor := loyalty.NewOrderProcessor(balanceManager, orderManager, loyalty.NewAccuralClientConfig(server.Config.AccrualAddress))
-	go orderProcessor.Start(context.TODO())
+	go orderProcessor.Start(context.Background())
 
 	serverHandler := handler.NewServerHandler(userManager, orderManager, withdrawManager, balanceManager)
 	serverLoger := mid.NewServiceLogger()
@@ -80,7 +78,7 @@ func NewServer() (*Server, error) {
 	newRouter.Use(mid.GzipHandle)
 
 	newRouter.Group(func(r chi.Router) {
-		r.Route("/api/user", func(r chi.Router) {
+		r.Route("/api/user/", func(r chi.Router) {
 			r.Post("/register", serverHandler.UserRegisterHandler)
 			r.Post("/login", serverHandler.UserLoginHandler)
 			r.Group(func(r chi.Router) {
