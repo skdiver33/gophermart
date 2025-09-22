@@ -216,5 +216,8 @@ func TestServerHandler_LoadOrderHandler(t *testing.T) {
 
 		})
 	}
-	sqlStorage.CloseAndClean().Error()
+	if err := sqlStorage.CloseAndClean(); err != nil {
+		t.Error("error close DB")
+	}
+
 }
