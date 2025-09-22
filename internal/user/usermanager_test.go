@@ -65,7 +65,7 @@ func TestUserManager_UserRegister(t *testing.T) {
 	userManager := user.NewUserManager(m, auth)
 
 	type want struct {
-		returnId  int
+		returnID  int
 		wantError bool
 	}
 	tests := []struct {
@@ -76,22 +76,22 @@ func TestUserManager_UserRegister(t *testing.T) {
 		{
 			name:     "positive register #1",
 			testUser: user.User{Login: "user", Password: "user"},
-			result:   want{returnId: 1, wantError: false},
+			result:   want{returnID: 1, wantError: false},
 		},
 		{
 			name:     "positive register #2",
 			testUser: user.User{Login: "admin", Password: "admin"},
-			result:   want{returnId: 2, wantError: false},
+			result:   want{returnID: 2, wantError: false},
 		},
 		{
 			name:     "positive register #3",
 			testUser: user.User{Login: "joe", Password: "dow"},
-			result:   want{returnId: 3, wantError: false},
+			result:   want{returnID: 3, wantError: false},
 		},
 		{
 			name:     "negative register #1",
 			testUser: user.User{Login: "user", Password: "passwd"},
-			result:   want{returnId: -1, wantError: true},
+			result:   want{returnID: -1, wantError: true},
 		},
 	}
 
@@ -99,7 +99,7 @@ func TestUserManager_UserRegister(t *testing.T) {
 		log.Println(test.name)
 		val, err := userManager.UserRegister(t.Context(), &test.testUser)
 		if val != nil {
-			require.Equal(t, val.ID, test.result.returnId)
+			require.Equal(t, val.ID, test.result.returnID)
 		}
 
 		if test.result.wantError {
