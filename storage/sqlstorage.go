@@ -211,7 +211,7 @@ func (storage *SQLStorage) UpdateOrderStatus(ctx context.Context, orderNumber st
 func (storage *SQLStorage) AddWithdraw(ctx context.Context, withdraw *withdraw.Withdraw) error {
 	_, err := storage.db.ExecContext(ctx, "INSERT INTO withdraws (order_number,user_id, sum,upload_data) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", withdraw.OrderNumber, withdraw.UserID, withdraw.Sum, withdraw.UploadData.Format(time.RFC3339))
 	if err != nil {
-		return errors.New("error inserted new order to DB")
+		return errors.New("error inserted new withdraw to DB")
 	}
 	return nil
 }
@@ -278,7 +278,7 @@ func (storage *SQLStorage) GetUserBalance(ctx context.Context, userID int) (*bal
 func (storage *SQLStorage) CreateUserBalance(ctx context.Context, userID int) error {
 	_, err := storage.db.ExecContext(ctx, "INSERT INTO balances (user_id, accrual,withdraw) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING", userID, 0, 0)
 	if err != nil {
-		return errors.New("error inserted new order to DB")
+		return fmt.Errorf("error inserted new user balance to DB %w", err)
 	}
 	return nil
 }
@@ -339,7 +339,7 @@ func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID 
 	_, err = tx.ExecContext(ctx, "INSERT INTO withdraws (order_number,user_id, sum,upload_data) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", orderNumber, userID, sum, uploadData.Format(time.RFC3339))
 
 	if err != nil {
-		return errors.New("error inserted new order to DB")
+		return errors.New("error inserted new withdraw to DB")
 	}
 
 	if err := tx.Commit(); err != nil {
