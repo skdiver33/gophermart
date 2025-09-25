@@ -211,7 +211,7 @@ func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request
 		http.Error(rw, "withdraw for order already exist", http.StatusUnprocessableEntity)
 		return
 	}
-	err = handler.balanceManager.WithdrawUserAccural(request.Context(), id, newWithdraw.Sum)
+	err = handler.balanceManager.WithdrawUserAccural(request.Context(), newWithdraw.UserID, newWithdraw.Sum, newWithdraw.OrderNumber, newWithdraw.UploadData)
 	if err != nil {
 		retCode := http.StatusInternalServerError
 		if errors.Is(err, bm.ErrBalanceNoEnoughBals) {
@@ -221,12 +221,7 @@ func (handler *ServerHandler) GetWithdrawHandler(rw http.ResponseWriter, request
 		http.Error(rw, err.Error(), retCode)
 		return
 	}
-	err = handler.withdrawManager.AddWithdraw(request.Context(), &newWithdraw)
-	if err != nil {
-		log.Printf("error change withdraw %s", err.Error())
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	rw.WriteHeader(http.StatusOK)
 }
 

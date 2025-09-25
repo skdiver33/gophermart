@@ -3,6 +3,7 @@ package balance
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 type Balance struct {
@@ -35,8 +36,8 @@ func (bm *BalanceManager) CreateUserBalance(ctx context.Context, userID int) err
 	return err
 }
 
-func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userID int, sum float32) error {
-	err := bm.BalanceStorage.ChangeBalanceAddWithdraw(ctx, userID, sum)
+func (bm *BalanceManager) WithdrawUserAccural(ctx context.Context, userID int, sum float32, orderNumber string, uploadTime time.Time) error {
+	err := bm.BalanceStorage.ChangeBalanceAddWithdraw(ctx, userID, sum, orderNumber, uploadTime)
 	return err
 }
 

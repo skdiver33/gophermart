@@ -311,7 +311,7 @@ func (storage *SQLStorage) ChangeBalanceAddAccrual(ctx context.Context, userID i
 	return nil
 }
 
-func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID int, sum float32) error {
+func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID int, sum float32, orderNumber string, uploadData time.Time) error {
 	tx, err := storage.db.Begin()
 	if err != nil {
 		log.Print("error create transaction")
@@ -334,6 +334,12 @@ func (storage *SQLStorage) ChangeBalanceAddWithdraw(ctx context.Context, userID 
 	if err != nil {
 		log.Print("error update balance")
 		return err
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO withdraws (order_number,user_id, sum,upload_data) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING", orderNumber, userID, sum, uploadData.Format(time.RFC3339))
+
+	if err != nil {
+		return errors.New("error inserted new order to DB")
 	}
 
 	if err := tx.Commit(); err != nil {
