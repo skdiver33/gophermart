@@ -7,6 +7,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	balance "github.com/skdiver33/gophermart/internal/balance"
@@ -50,17 +51,17 @@ func (mr *MockBalanceStorageInterfaceMockRecorder) ChangeBalanceAddAccrual(arg0,
 }
 
 // ChangeBalanceAddWithdraw mocks base method.
-func (m *MockBalanceStorageInterface) ChangeBalanceAddWithdraw(arg0 context.Context, arg1 int, arg2 float32) error {
+func (m *MockBalanceStorageInterface) ChangeBalanceAddWithdraw(arg0 context.Context, arg1 int, arg2 float32, arg3 string, arg4 time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ChangeBalanceAddWithdraw", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "ChangeBalanceAddWithdraw", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ChangeBalanceAddWithdraw indicates an expected call of ChangeBalanceAddWithdraw.
-func (mr *MockBalanceStorageInterfaceMockRecorder) ChangeBalanceAddWithdraw(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockBalanceStorageInterfaceMockRecorder) ChangeBalanceAddWithdraw(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeBalanceAddWithdraw", reflect.TypeOf((*MockBalanceStorageInterface)(nil).ChangeBalanceAddWithdraw), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeBalanceAddWithdraw", reflect.TypeOf((*MockBalanceStorageInterface)(nil).ChangeBalanceAddWithdraw), arg0, arg1, arg2, arg3, arg4)
 }
 
 // CreateUserBalance mocks base method.
