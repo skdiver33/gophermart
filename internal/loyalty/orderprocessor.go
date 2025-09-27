@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -38,6 +39,7 @@ const defaultPause = 1
 var workerPause = int64(defaultPause)
 var workerCounter = int64(0)
 var numWorkers int64
+var wg sync.WaitGroup
 
 func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 
@@ -59,18 +61,18 @@ func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 			numJobs := len(orderInProc)
 			jobs := make(chan string, numJobs)
 			result := make(chan ProcessResult, numJobs)
-
 			numWorkers = int64(numJobs)/5 + 1
-
 			for i := 0; i < int(numWorkers); i++ {
+				wg.Add(1)
 				go worker(workerCtx, processor.client, jobs, result)
 			}
 			for _, order := range orderInProc {
 				jobs <- order.Number
 			}
 			close(jobs)
-			for j := 0; j < numJobs; j++ {
-				res := <-result
+			wg.Wait()
+			close(result)
+			for res := range result {
 				if res.ProcessingError != nil {
 					switch {
 					case errors.Is(res.ProcessingError, ErrAccruallErrorDecodeAnswer):
@@ -93,7 +95,6 @@ func (processor *OrderProcessor) ProcessOrder(ctx context.Context) {
 					processor.OrderManager.UpdateOrderStatus(ctx, res.Accrual.Order, res.Accrual.Status, res.Accrual.Accrual)
 				}
 			}
-			close(result)
 		}
 	}
 }
@@ -115,6 +116,7 @@ func worker(ctx context.Context, client *AccrualClient, jobs <-chan string, res 
 				timer.Stop()
 				log.Printf("worker end work because close main ctx")
 				res <- ProcessResult{}
+				wg.Done()
 				return
 			case <-timer.C:
 				accrualResult, err := client.GetAccural(j)
@@ -141,4 +143,5 @@ func worker(ctx context.Context, client *AccrualClient, jobs <-chan string, res 
 			timer.Stop()
 		}
 	}
+	wg.Done()
 }

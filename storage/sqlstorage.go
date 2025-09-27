@@ -169,7 +169,8 @@ func (storage *SQLStorage) GetAllOrderForID(ctx context.Context, id int) ([]orde
 
 func (storage *SQLStorage) GetUnprocOrders(ctx context.Context) ([]order.Order, error) {
 
-	rows, err := storage.db.QueryContext(ctx, "SELECT order_number,user_id,status,accrual,upload_data FROM orders where status in ('NEW','PROCESSING')")
+	rowsNumber := 10
+	rows, err := storage.db.QueryContext(ctx, "SELECT order_number,user_id,status,accrual,upload_data FROM orders where status in ('NEW','PROCESSING') ORDER BY user_id FETCH FIRST $1 ROWS ONLY", rowsNumber)
 	if err != nil {
 		return nil, fmt.Errorf("error get all orders for user %w", err)
 	}
